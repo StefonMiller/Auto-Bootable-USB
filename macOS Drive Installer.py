@@ -165,12 +165,21 @@ def partition_drive(selected_versions, version_list, disk_label):
 
 	os.system(command)
 
+# Forcibly ejects and mounts the drive to cut ties to any processes using it
+def free_disk(label, password):
+	command = "diskutil unmountDisk force " + label
+	os.system(command)
+	command = "echo " + password + " | sudo -S diskutil mountDisk " + label
+	os.system(command)
 threads = []
 
 password = input("What is the password for this account?")
 
 # Get the label, name, and capacity of the disk the user wants to use
 disk_label, disk_name, disk_size = get_disk()
+# Force eject and mount the disk before attempting to format it
+free_disk(disk_label, password)
+
 # Format the selected disk
 format_disk(disk_label, disk_name)
 
@@ -180,7 +189,7 @@ script_loc = '.app/Contents/Resources/createinstallmedia'
 
 # Dictionary of versions and their associated version objects
 versions = {
-	"Big Sur": Version("Big Sur", 13, r'echo ' + password + ' | sudo -S {}'.format(installer_loc + '/Install\ macOS\ Big\ Sur' + script_loc + ' --volume /Volumes/Install\ macOS\ Big\ Sur --nointeraction')),
+	"Big Sur": Version("Big Sur", 14, r'echo ' + password + ' | sudo -S {}'.format(installer_loc + '/Install\ macOS\ Big\ Sur' + script_loc + ' --volume /Volumes/Install\ macOS\ Big\ Sur --nointeraction')),
 	"Catalina": Version("Catalina", 10, r'echo ' + password + ' | sudo -S {}'.format(installer_loc + '/Install\ macOS\ Catalina' + script_loc + ' --volume /Volumes/Install\ macOS\ Catalina --nointeraction')),
 	"Mojave": Version("Mojave", 10, r'echo ' + password + ' | sudo -S {}'.format(installer_loc + '/Install\ macOS\ Mojave' + script_loc + ' --volume /Volumes/Install\ macOS\ Mojave --nointeraction')),
 	"High Sierra": Version("High Sierra", 10, r'echo ' + password + ' | sudo -S {}'.format(installer_loc + '/Install\ macOS\ High\ Sierra' + script_loc + ' --volume /Volumes/Install\ macOS\ High\ Sierra --nointeraction'))
@@ -203,3 +212,4 @@ for version in selected_versions:
 # Once we have threads associated with each OS install, attempt to execute the commands simultaneously
 for index, thread in enumerate(threads):
  	thread.join()
+
