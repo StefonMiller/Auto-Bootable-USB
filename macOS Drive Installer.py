@@ -12,6 +12,9 @@ import glob
 import shutil
 from threading import Thread
 
+# TODO Figure out how to disable buffereing with subprocess in order to have the live progress bars with os.system/popen
+# TODO Figure out automatic password entry with the install commands
+
 
 # Class encapsulating data on macOS versions
 class Version:
@@ -177,10 +180,10 @@ script_loc = '.app/Contents/Resources/createinstallmedia'
 
 # Dictionary of versions and their associated version objects
 versions = {
-	"Big Sur": Version("Big Sur", 13, r'sudo {}'.format(installer_loc + '/Install\ macOS\ Big\ Sur' + script_loc + ' --volume /Volumes/Install\ macOS\ Big\ Sur --nointeraction')),
-	"Catalina": Version("Catalina", 10, r'sudo {}'.format(installer_loc + '/Install\ macOS\ Catalina' + script_loc + ' --volume /Volumes/Install\ macOS\ Catalina --nointeraction')),
-	"Mojave": Version("Mojave", 10, r'sudo {}'.format(installer_loc + '/Install\ macOS\ Mojave' + script_loc + ' --volume /Volumes/Install\ macOS\ Mojave --nointeraction')),
-	"High Sierra": Version("High Sierra", 10, r'sudo {}'.format(installer_loc + '/Install\ macOS\ High\ Sierra' + script_loc + ' --volume /Volumes/Install\ macOS\ High\ Sierra --nointeraction'))
+	"Big Sur": Version("Big Sur", 13, r'echo CSSD@pitt123 | sudo -S {}'.format(installer_loc + '/Install\ macOS\ Big\ Sur' + script_loc + ' --volume /Volumes/Install\ macOS\ Big\ Sur --nointeraction')),
+	"Catalina": Version("Catalina", 10, r'echo CSSD@pitt123 | sudo -S {}'.format(installer_loc + '/Install\ macOS\ Catalina' + script_loc + ' --volume /Volumes/Install\ macOS\ Catalina --nointeraction')),
+	"Mojave": Version("Mojave", 10, r'echo CSSD@pitt123 | sudo -S {}'.format(installer_loc + '/Install\ macOS\ Mojave' + script_loc + ' --volume /Volumes/Install\ macOS\ Mojave --nointeraction')),
+	"High Sierra": Version("High Sierra", 10, r'echo CSSD@pitt123 | sudo -S {}'.format(installer_loc + '/Install\ macOS\ High\ Sierra' + script_loc + ' --volume /Volumes/Install\ macOS\ High\ Sierra --nointeraction'))
 }
 
 # Get the versions the user would like to install
