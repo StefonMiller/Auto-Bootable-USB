@@ -1,2 +1,2 @@
 # Auto-macOS-Installers
-Automatically formats and loads bootable macOS installers onto a flash drive
+Automatically formats, partitions, and installs bootable macOS installers to a single USB drive
