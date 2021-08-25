@@ -189,7 +189,7 @@ def select_iso():
 	
 	# Inform user if no isos found
 	if not files:
-		print("No ISO files found. Please make sure the ISO is in the same directory as this script.")
+		print("No ISO files found. Please make sure the ISO is in a folder named \"iso\" in the same directory as this script")
 		exit(0)
 	else:
 		# If there are ISOs, have the user select one
@@ -275,8 +275,8 @@ def create_macos_drive(password):
 	versions = {
 		"Big Sur": Version("Big Sur", 14, r'echo ' + password + ' | sudo -S {}'.format(installer_loc + '/Install\ macOS\ Big\ Sur' + script_loc + ' --volume /Volumes/Install\ macOS\ Big\ Sur --nointeraction')),
 		"Catalina": Version("Catalina", 10, r'echo ' + password + ' | sudo -S {}'.format(installer_loc + '/Install\ macOS\ Catalina' + script_loc + ' --volume /Volumes/Install\ macOS\ Catalina --nointeraction')),
-		"Mojave": Version("Mojave", 10, r'echo ' + password + ' | sudo -S {}'.format(installer_loc + '/Install\ macOS\ Mojave' + script_loc + ' --volume /Volumes/Install\ macOS\ Mojave --nointeraction')),
-		"High Sierra": Version("High Sierra", 10, r'echo ' + password + ' | sudo -S {}'.format(installer_loc + '/Install\ macOS\ High\ Sierra' + script_loc + ' --volume /Volumes/Install\ macOS\ High\ Sierra --nointeraction'))
+		"Mojave": Version("Mojave", 7, r'echo ' + password + ' | sudo -S {}'.format(installer_loc + '/Install\ macOS\ Mojave' + script_loc + ' --volume /Volumes/Install\ macOS\ Mojave --nointeraction')),
+		"High Sierra": Version("High Sierra", 7, r'echo ' + password + ' | sudo -S {}'.format(installer_loc + '/Install\ macOS\ High\ Sierra' + script_loc + ' --volume /Volumes/Install\ macOS\ High\ Sierra --nointeraction'))
 	}
 
 	# Get the versions the user would like to install
