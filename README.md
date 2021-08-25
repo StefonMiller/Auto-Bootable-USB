@@ -1,6 +1,11 @@
 # Auto-Bootable-USB
 Automatically formats, partitions, and installs bootable macOS/Linux installers for a given USB
 
+## Making Windows Installers
+Please first download a Windows ISO and place it in the "Windows" folder alongside the script. 
+
+Once you have the Windows ISO in the right place, you can simply run the script and it will take care of the rest!
+
 ## Making macOS drives
 Before doing anything, please ensure you have the macOS installers downloaded and in the directory Applications/macOS Installers. 
 
