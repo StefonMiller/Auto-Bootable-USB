@@ -1,5 +1,5 @@
-# Auto-macOS-Installers
-Automatically formats, partitions, and installs bootable macOS installers to a single USB drive
+# Auto-Bootable-USB
+Automatically formats, partitions, and installs bootable macOS/Linux installers for a given USB
 
 ## Making macOS drives
 Before doing anything, please ensure you have the macOS installers downloaded and in the directory Applications/macOS Installers. 
