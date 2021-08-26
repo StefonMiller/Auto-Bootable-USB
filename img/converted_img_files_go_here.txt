@@ -1,0 +1,1 @@
+This is where the script will output .img files for Linux installers
