@@ -7,10 +7,12 @@
 """
 import os
 from sys import stderr, stdout, stdin
-import subprocess, re
+import subprocess
 import glob
-import shutil
+from subprocess import Popen, PIPE
 from threading import Thread
+from sys import platform
+import time
 
 # TODO Figure out how to disable buffereing with subprocess in order to have the live progress bars with os.system/popen
 
@@ -29,10 +31,9 @@ class Version:
 class Disk:
 	# Initialize class objects with data
 	# @Param label: Disk label
-	def __init__(self, label):
+	def __init__(self, label, size):
 		self.label = label
-		self.name = ""
-		self.size = ""
+		self.size = size
 
 # Function threads will target to execute install commands simultaneously
 # @Param command: Command to execute
@@ -257,15 +258,15 @@ def transfer_to_disk(img, label):
 
 # Creates a bootable macOS drive with support for multiple partitions
 # @Param password: Password for the computer
-def create_macos_drive(password):
+def create_macos_drive(self, password):
 	threads = []
 	# Get the label, name, and capacity of the disk the user wants to use
-	disk_label, disk_name, disk_size = get_disk()
+	disk_label, disk_name, disk_size = self.get_disk()
 	# Force eject and mount the disk before attempting to format it
-	free_disk(disk_label, password)
+	self.free_disk(disk_label, password)
 
 	# Format the selected disk
-	format_disk(disk_label, disk_name, "JHFS+", "")
+	self.format_disk(disk_label, disk_name, "JHFS+", "")
 
 	# Define the locations of the installer files and the createinstallmedia script
 	installer_loc = r'/Applications/macOS\ Installers'
@@ -280,16 +281,16 @@ def create_macos_drive(password):
 	}
 
 	# Get the versions the user would like to install
-	selected_versions = select_versions(disk_name, disk_size, versions)
+	selected_versions = self.select_versions(disk_name, disk_size, versions)
 	# Partition the drives according to the selected versions
-	partition_drive(selected_versions, versions, disk_label)
+	self.partition_drive(selected_versions, versions, disk_label)
 
 
 	# Loop through the selected versions and execute the install commands associated with them
 	for version in selected_versions:
 		volume_path = "/Volumes/Install\ macOS\ " + version.replace(" ", "\ ") 
 		command = versions[version].command
-		thread = Thread(target=runInstallCommand, args=(command,))
+		thread = Thread(target=self.runInstallCommand, args=(command,))
 		threads.append(thread)
 		thread.start()
 
@@ -297,31 +298,156 @@ def create_macos_drive(password):
 	for index, thread in enumerate(threads):
 		thread.join()
 
-def create_linux_drive(password):
+def create_linux_drive(self, password):
 	threads = []
 	# Get the label, name, and capacity of the disk the user wants to use
-	disk_label, disk_name, disk_size = get_disk()
+	disk_label, disk_name, disk_size = self.get_disk()
 	# Force eject and mount the disk before attempting to format it
-	free_disk(disk_label, password)
+	self.free_disk(disk_label, password)
 
 	# Format the selected disk
-	format_disk(disk_label, disk_name, "exFAT", "GPT")
+	self.format_disk(disk_label, disk_name, "exFAT", "GPT")
 
 	# Have user select the ISO to install
-	iso = select_iso()
+	iso = self.select_iso()
 
 	# Convert the ISO file to an .img file
-	img = convert_to_img(iso)
+	img = self.convert_to_img(iso)
 
 	# Transfer the .img file to the USB
-	transfer_to_disk(img, disk_label)
+	self.transfer_to_disk(img, disk_label)
 	print("Transfer complete. USB is ready for use")
 
+
+def create_windows_drive():
+	# Path to Windows install iso
+	iso_path = os.path.abspath("iso/Windows.iso").replace("\\", "\\\\")
+	# Display all disks to the user and have them select one to format
+	disk_num = select_disk()
+	# Format the disk using diskpart
+	disk_label = format_disk_windows(disk_num)
 	
+	iso_label = get_label()
+	# If the W10 iso isn't already mounted, mount it with powershell
+	if iso_label is None:
+		command = "Powershell Mount-DiskImage -ImagePath " + iso_path
+		p = Popen(command, shell=True)
+		p.communicate()
+		iso_label = get_label()
+	
+	# Copy the iso to the drive
+	start_copy(iso_label, disk_label)
+
+	# After the copy, unmount the iso
+	command = "Powershell Dismount-DiskImage -ImagePath " + iso_path
+	p = Popen(command, shell=True)
+	p.communicate()
+
+	print("Windows ISO is ready for use")
+
+# Displays all mounted disks and prompts the user to select one
+# @Return: Number of selected disk
+def select_disk():
+	# Open diskpart and execute the list disk command
+	p = Popen("diskpart", shell=True, stdin=PIPE, stdout=PIPE)
+	time.sleep(.5)
+	p.stdin.write(bytes("list disk\n", 'utf-8'))
+	# Store output of list disk in a variable
+	out, err = p.communicate()
+	out = out.decode().split("\n")
+
+	disks = []
+
+	# Parse the output of diskpart into a Disk object
+	output = "Please select one of the following disk numbers:\n"
+	for line in out:
+		if("Online" in line):
+			line = line.split(" ")
+			# Parse the output of diskpart and store the disk name and size in a Disk object
+			disk_name = line[2] + " " + line[3]
+			# Disks need to have at least 1GB capacity to be candidates
+			disk_size = line[line.index("GB") - 1]
+			output += "\t" + disk_name + ":\t" + disk_size + " GB\n"
+			disks.append(Disk(disk_name, disk_size))
+	# Prompt the user to select one of the disks from diskpart
+	disk = -1
+	while(not (-1 < disk < len(disks))):
+		# Drives need at least 12GB of space to be candidates
+		if(int(disks[disk].size) < 12):
+			print("Not enough space on this drive for Windows")
+			disk = -1
+		else:
+			disk = int(input(output))
+	# Return disk selection
+	return disk
+
+# Formats a disk using a diskpart script
+# @Param disk_num: Disk number selected by the user
+# @Return: The label of the formatted disk
+def format_disk_windows(disk_num):
+	# Write commands to format and partition the disk to a txt file
+	with open("commands.txt", "wt") as file:
+		file.write("select disk " + str(disk_num) + "\n")
+		file.write("clean\n")
+		file.write("convert mbr\n")
+		file.write("create partition primary\n")
+		file.write("select partition 1\n")
+		file.write("active\n")
+		file.write("format FS=NTFS quick\n")
+		file.write("assign letter=X\n")
+		file.write("exit")
+	# Get path to file 
+	file_path = os.path.realpath(file.name)
+	file.close()
+
+	# Replace \ characters in file with \\
+	file_path = file_path.replace("\\", "\\\\")
+	# Open a diskpart process with the script flag to execute the command text file created
+	command = "diskpart /s " + file_path
+	p = Popen(command, shell=True, stdin=PIPE, stderr=PIPE)
+	p.communicate()
+
+	return "X"
+
+# Uses diskpart to get the label of the W10 iso
+# @Return: None if the W10 iso isn't mounted. The label of the iso if it is mounted
+def get_label():
+	# Open diskpart and execute the list disk command
+	p = Popen("diskpart", shell=True, stdin=PIPE, stdout=PIPE)
+	time.sleep(.5)
+	p.stdin.write(bytes("list volume\n", 'utf-8'))
+	# Store output of list disk in a variable
+	out, err = p.communicate()
+	out = out.decode().split("\n")
+	
+	label = None
+	# If the W10 iso is mounted, return the label of it
+	for line in out:
+		if(("ESD-ISO" in line) and ("DVD-ROM" in line)):
+			line = line.split(" ")
+			label = line[8]
+	
+	return label
+
+# Initializes the copy process from the W10 iso to the target USB
+# @Param iso: Label of the ISO
+# @Param disk: Label of the disk
+def start_copy(iso, disk):
+	if(iso is None):
+		print("No iso found. Please make sure there is a valid Windows ISO in the \"iso\" directory")
+		exit(0)
+	# Navigate to the iso's boot directory and set the bootsect to /nt60. Then copy the files from the iso to the disk
+	command = iso + ": && cd boot && bootsect /nt60 " + disk + ": && " + "xcopy " + iso + ":\*.* "  + disk + ":\ /E /F /H"
+	p = Popen(command, shell=True)
+	p.communicate()
+		
+
 if __name__ == "__main__":
 	while(True):
-		drive_type = int(input("Would you like to create a macOS or linux drive?\n"
-		+ "\t1). macOS\n\t2). Linux\n"))
+		drive_type = 0
+		if platform == "linux" or platform == "linux2" or platform == "darwin":
+			drive_type = int(input("Would you like to create a macOS or linux drive?\n\t1). macOS\n\t2). Linux\n\t"))
+
 		if(drive_type == 1):
 			os.system("stty -echo")
 			password = input("What is the password for this account?")
@@ -336,5 +462,10 @@ if __name__ == "__main__":
 			print("\n")
 			create_linux_drive(password)
 			exit(0)
+		elif(platform == "win32"):
+			print("Detected Windows computer. Creating a Windows installer...")
+			create_windows_drive()
+			exit(0)
 		else:
 			print("Please select a valid option")
+		
