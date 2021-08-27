@@ -341,7 +341,7 @@ class WindowsSystem:
 		if("windows" in iso_path.lower()):
 			iso_keywords = ["esd-iso"]
 		else:
-			# Truncate .iso extension from file and split based on - characters. I will repent for this abomination
+			# Truncate .iso extension from file and split based on - characters. I promise to repent for this abomination
 			iso_name = iso_path.split("\\")[-1]
 			iso_keywords = " ".join(iso_name.lower().split(".")[:-1]).split("-")
 		# Replace \ characters in the path with \\
@@ -414,7 +414,7 @@ class WindowsSystem:
 			file.write("create partition primary\n")
 			file.write("select partition 1\n")
 			file.write("active\n")
-			file.write("format FS=NTFS quick\n")
+			file.write("format FS=FAT32 quick\n")
 			file.write("assign letter=X\n")
 			file.write("exit")
 		# Get path to file 
@@ -470,7 +470,7 @@ class WindowsSystem:
 			print("No iso found. Please make sure there is a valid Windows ISO in the \"iso\" directory")
 			exit(0)
 		# Navigate to the iso's boot directory and set the bootsect to /nt60. Then copy the files from the iso to the disk
-		command = iso + ": && cd boot && bootsect /nt60 " + disk + ": && " + "xcopy " + iso + ":\*.* "  + disk + ":\ /E /F /H"
+		command = iso + ": && cd boot && bootsect /nt60 " + disk + ": && " + "xcopy " + iso + ":\*.* "  + disk + ":\ /S /E /F /G /H"
 		p = Popen(command, shell=True)
 		p.communicate()
 
