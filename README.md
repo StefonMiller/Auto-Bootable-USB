@@ -2,6 +2,7 @@
 Automatically formats, partitions, and installs bootable macOS/Linux installers for a given USB
 
 
+# Usage Instructions
 **You must run this script as an administrator on Windows**
 
 ## Making Windows Installers (Windows Only)
