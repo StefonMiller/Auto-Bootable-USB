@@ -36,38 +36,36 @@ class Disk:
 		self.label = label
 		self.size = size
 
-class BashSystem:
+class LinuxSystem:
+	
+	def __init__(self):
+		pass
 
+# Class with functions for creating drives on macOS using diskutil
+class MacSystem:
+
+	# Prompt user to select what kind of drive they would like to create
 	def __init__(self):
 		while True:
 			input_text = "What installer would you like to create\n"
-			if(platform == "linux" or platform == "linux2"):
-				print("Linux system detected. Creating bootable Linux drive...")
+			input_text += "\t1). macOS\n\t2). Linux"
+			drive_type = int(input(input_text))
+			if(drive_type == 1):
+				os.system("stty -echo")
+				password = input("What is the password for this account?")
+				os.system("stty echo")
+				print("\n")
+				self.create_macos_drive(password)
+				exit(0)
+			elif(drive_type == 2):
 				os.system("stty -echo")
 				password = input("What is the password for this account?")
 				os.system("stty echo")
 				print("\n")
 				self.create_linux_drive(password)
 				exit(0)
-			elif(platform == "darwin"):
-				input_text += "\t1). macOS\n\t2). Linux"
-				drive_type = int(input(input_text))
-				if(drive_type == 1):
-					os.system("stty -echo")
-					password = input("What is the password for this account?")
-					os.system("stty echo")
-					print("\n")
-					self.create_macos_drive(password)
-					exit(0)
-				elif(drive_type == 2):
-					os.system("stty -echo")
-					password = input("What is the password for this account?")
-					os.system("stty echo")
-					print("\n")
-					self.create_linux_drive(password)
-					exit(0)
-				else:
-					print("Invalid selection")
+			else:
+				print("Invalid selection")
 
 	# Function threads will target to execute install commands simultaneously
 	# @Param command: Command to execute
@@ -93,6 +91,10 @@ class BashSystem:
 			if(("/dev/disk" in line) and ("external" in line)):
 				# Add a new Disk object to the array of disks
 				disks.append(Disk(line.split(" ")[0]))
+
+		if len(disks) == 0:
+			print("No external devices detected. Please ensure you have a USB plugged in")
+			exit(0)
 
 		# Iterate through the disks and get information on their names and sizes 
 		for disk in disks:
@@ -324,13 +326,14 @@ class BashSystem:
 		self.transfer_to_disk(img, disk_label)
 		print("Transfer complete. USB is ready for use")
 
-
+# Class containing functions for creating drives using diskpart
 class WindowsSystem:
 
 	def __init__(self):
 		self.create_drive()
 		exit(0)
 
+	# Get the type of iso to create, then format the drive and transfer files
 	def create_drive(self):
 		# Display all disks to the user and have them select one to format
 		disk_num = self.get_disk()
@@ -508,8 +511,10 @@ if __name__ == "__main__":
 		# Determine host OS and display the correponding options
 		drive_type = 0
 		input_text = "What installer would you like to create?\n"
-		if platform == "linux" or platform == "linux2" or platform == "darwin":
-			BashSystem()
+		if platform == "linux" or platform == "linux2":
+			LinuxSystem()
+		elif platform == "darwin":
+			MacSystem()
 		elif platform == "win32":
 			WindowsSystem()
 		else:
