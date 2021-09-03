@@ -16,6 +16,8 @@ import time
 import re
 
 # TODO Figure out how to disable buffereing with subprocess in order to have the live progress bars with os.system/popen
+# TODO Auto-download isos if user doesn't have any
+# TODO Add full support for all OS's
 
 # Class encapsulating data on macOS versions
 class Version:
@@ -39,7 +41,77 @@ class Disk:
 class LinuxSystem:
 	
 	def __init__(self):
-		pass
+		print("Linux system detected. Creating Linux drive...")
+		os.system("stty -echo")
+		password = input("What is the password for this account?")
+		os.system("stty echo")
+		print("\n")
+		self.create_linux_drive(password)
+		exit(0)
+	
+	def create_linux_drive(self, password):
+		selected_disk, part_label = self.get_disk()
+		self.unmount_disk(part_label)
+		self.format_disk(part_label)
+		iso_path = select_iso()
+		self.transfer_to_disk(iso_path, selected_disk)
+
+	def unmount_disk(self, label):
+		command = "umount " + label
+		proc = subprocess.Popen(command, shell=True)
+		proc.communicate()
+
+	def format_disk(self, label):
+		command = "sudo mkfs.vfat " + label
+		proc = subprocess.Popen(command, shell=True)
+		proc.communicate()
+
+	def transfer_to_disk(self, iso, disk):
+		command = "sudo dd if=" + iso + " of=" + disk.label + " bs=32M status=progress"
+		proc = subprocess.Popen(command, shell=True)
+		proc.communicate()
+	
+	def get_disk(self):
+		# User lsblk to get all disks and their sizes + paths
+		command = "lsblk --output TYPE,MODEL,SIZE,PATH | grep \"disk\""
+		proc = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+		out, err = proc.communicate()
+		out = out.decode().split("\n")
+		num_lines = 1
+		disks = []
+		# Loop through output of lsblk and create Disk objects for each one
+		input_text = "Please select a drive to install Linux on:\n"
+		for line in out:
+			if line:
+				temp_line = list(filter(None, line.split(" ")))
+				disks.append(Disk(temp_line[3], temp_line[2]))
+				temp_line = " ".join(temp_line[1:])
+				input_text += "\t" + str(num_lines) + "). " + temp_line + "\n"
+				num_lines += 1
+
+		# If no disks found, inform user and exit
+		if(len(disks) == 0):
+			print("No devices detected. Please plug in a USB and try again")
+			exit(0)
+
+		# Prompt user to select a disk
+		disk_choice = 999
+		# Loop until we receive a valid input
+		while(disk_choice > len(disks) or disk_choice < 1):
+			disk_choice = int(input(input_text))
+		
+		# Once we have the label of the disk, get the label of the mountpoint
+		command = "lsblk --noheadings --output KNAME " + disks[disk_choice-1].label
+		proc = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+		out, err = proc.communicate()
+		out = list(filter(None, out.decode().split("\n")))
+		temp_label = disks[disk_choice-1].label
+		# Determine the mountpoint 
+		for line in out:
+			if(("/dev/" + line) != disks[disk_choice-1].label):
+				temp_label = "/dev/" + line
+		# Return the selected disk information
+		return disks[disk_choice-1], temp_label
 
 # Class with functions for creating drives on macOS using diskutil
 class MacSystem:
@@ -507,17 +579,14 @@ def select_iso():
 		return os.path.abspath(files[iso-1])
 
 if __name__ == "__main__":
-	while(True):
-		# Determine host OS and display the correponding options
-		drive_type = 0
-		input_text = "What installer would you like to create?\n"
-		if platform == "linux" or platform == "linux2":
-			LinuxSystem()
-		elif platform == "darwin":
-			MacSystem()
-		elif platform == "win32":
-			WindowsSystem()
-		else:
-			print("Unsupported platform")
-			exit(0)
+	# Determine host OS and display the correponding options
+	if platform == "linux" or platform == "linux2":
+		LinuxSystem()
+	elif platform == "darwin":
+		MacSystem()
+	elif platform == "win32":
+		WindowsSystem()
+	else:
+		print("Unsupported platform")
+		exit(0)
 		
