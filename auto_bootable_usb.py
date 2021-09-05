@@ -16,8 +16,6 @@ import time
 import re
 
 # TODO Figure out how to disable buffereing with subprocess in order to have the live progress bars with os.system/popen
-# TODO Auto-download isos if user doesn't have any
-# TODO Add full support for all OS's
 
 # Class encapsulating data on macOS versions
 class Version:
@@ -38,36 +36,108 @@ class Disk:
 		self.label = label
 		self.size = size
 
+# Class with functions for creating drives on Linux using terminal and woeusb
 class LinuxSystem:
-	
+	# Prompt user to select the installer to make
 	def __init__(self):
-		print("Linux system detected. Creating Linux drive...")
-		os.system("stty -echo")
-		password = input("What is the password for this account?")
-		os.system("stty echo")
-		print("\n")
-		self.create_linux_drive(password)
-		exit(0)
+		while True:
+			input_text = "What installer would you like to create\n"
+			input_text += "\t1). Linux\n\t2). Windows\n"
+			drive_type = int(input(input_text))
+			if(drive_type == 1):
+				os.system("stty -echo")
+				password = input("What is the password for this account?")
+				os.system("stty echo")
+				print("\n")
+				self.create_linux_drive(password)
+				exit(0)
+			elif(drive_type == 2):
+				os.system("stty -echo")
+				password = input("What is the password for this account?")
+				os.system("stty echo")
+				print("\n")
+				self.create_windows_drive(password)
+				exit(0)
+			else:
+				print("Invalid selection")
 	
+	# Creates a Windows USB using woeusb
+	# @Param password: Password for the computer
+	def create_windows_drive(self, password):
+		# Get the disk and iso to use
+		selected_disk, part_label = self.get_disk()
+		iso_path = select_iso()
+
+		# Run the woeusb command and see if there was any error
+		command = "woeusb"
+		proc = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+		out, err = proc.communicate()
+
+		# If there was an error, prompt the user to install woeusb
+		if(err):
+			selection = ""
+			while(selection != "y" and selection != "n"):
+				selection = input("woeusb is not installed on this OS. Would you like to install it? (y/n)").lower()
+			
+			# If the user wants to install woeusb, download the package and install it
+			if(selection == "y"):
+				print("\nInstalling dependencies...")
+				command = "sudo apt -y install coreutils wimtools util-linux gawk parted wget p7zip"
+				proc = subprocess.Popen(command, shell=True)
+				proc.communicate()
+
+				command = "wget https://raw.githubusercontent.com/WoeUSB/WoeUSB/master/sbin/woeusb -O /tmp/woeusb"
+				proc = subprocess.Popen(command, shell=True)
+				proc.communicate()
+
+				command = "sudo install /tmp/woeusb /usr/local/bin"
+				proc = subprocess.Popen(command, shell=True)
+				proc.communicate()
+
+				print("\nwoeusb sucessfully installed!")
+			else:
+				exit(0)
+		
+		# Use woeusb to create the bootable windows USB
+		command = "echo " + password + " | sudo -S sudo woeusb --device " + iso_path + " " + selected_disk.label + " --target-filesystem ntfs"
+		proc = subprocess.Popen(command, shell=True)
+		proc.communicate()
+
+	# Creates a linux drive using terminal
+	# @Param password: Password for the machine
 	def create_linux_drive(self, password):
+		# Get the disk to use and unmount all points associated with it
 		selected_disk, part_label = self.get_disk()
 		self.unmount_disk(part_label)
-		self.format_disk(part_label)
+		# Once the drive is unmounted, format it
+		self.format_disk(part_label, password)
+		print("Drive successfully formatted")
+		# Prompt the user to select the ISO to use
 		iso_path = select_iso()
-		self.transfer_to_disk(iso_path, selected_disk)
+		# Transfer the selected ISO to the selected disk
+		self.transfer_to_disk(iso_path, selected_disk, password)
 
+	# Unmounts a selected disk label
+	# @Param label: Label of disk/partition to unmount
 	def unmount_disk(self, label):
 		command = "umount " + label
 		proc = subprocess.Popen(command, shell=True)
 		proc.communicate()
 
-	def format_disk(self, label):
-		command = "sudo mkfs.vfat " + label
+	# Formats a selected disk label
+	# @Param label: Label of disk to erase
+	# @Param password: Password for the computer
+	def format_disk(self, label, password):
+		command = "echo " + password + "| sudo -S mkfs.ntfs -f " + label
 		proc = subprocess.Popen(command, shell=True)
 		proc.communicate()
 
-	def transfer_to_disk(self, iso, disk):
-		command = "sudo dd if=" + iso + " of=" + disk.label + " bs=32M status=progress"
+	# Transfers files from an iso to a disk
+	# @Param iso: Path to the iso
+	# @Param disk: Disk object
+	# @Param password: Password for the user
+	def transfer_to_disk(self, iso, disk, password):
+		command = "echo " + password + " | sudo -S dd if=" + iso + " of=" + disk.label + " bs=32M status=progress oflag=sync"
 		proc = subprocess.Popen(command, shell=True)
 		proc.communicate()
 	
@@ -110,12 +180,12 @@ class LinuxSystem:
 		for line in out:
 			if(("/dev/" + line) != disks[disk_choice-1].label):
 				temp_label = "/dev/" + line
+				break
 		# Return the selected disk information
 		return disks[disk_choice-1], temp_label
 
 # Class with functions for creating drives on macOS using diskutil
 class MacSystem:
-
 	# Prompt user to select what kind of drive they would like to create
 	def __init__(self):
 		while True:
