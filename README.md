@@ -5,7 +5,7 @@ Automatically formats, partitions, and installs bootable macOS/Linux installers 
 # Usage Instructions
 **You must run this script as an administrator on Windows**
 
-## Making Windows Installers (Windows Only)
+## Making Windows Installers (Windows/Linux)
 Please first download a Windows ISO and place it in the "Windows" folder alongside the script. 
 
 Once you have the Windows ISO in the right place, you can simply run the script and it will take care of the rest!
