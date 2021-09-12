@@ -6,16 +6,12 @@
 	- Stefon M
 """
 import os
-from sys import stderr, stdout, stdin
 import subprocess
 import glob
 from subprocess import Popen, PIPE
 from threading import Thread
 from sys import platform
 import time
-import re
-
-# TODO Figure out how to disable buffereing with subprocess in order to have the live progress bars with os.system/popen
 
 # Class encapsulating data on macOS versions
 class Version:
@@ -40,26 +36,7 @@ class Disk:
 class LinuxSystem:
 	# Prompt user to select the installer to make
 	def __init__(self):
-		while True:
-			input_text = "What installer would you like to create\n"
-			input_text += "\t1). Linux\n\t2). Windows\n"
-			drive_type = int(input(input_text))
-			if(drive_type == 1):
-				os.system("stty -echo")
-				password = input("What is the password for this account?")
-				os.system("stty echo")
-				print("\n")
-				self.create_linux_drive(password)
-				exit(0)
-			elif(drive_type == 2):
-				os.system("stty -echo")
-				password = input("What is the password for this account?")
-				os.system("stty echo")
-				print("\n")
-				self.create_windows_drive(password)
-				exit(0)
-			else:
-				print("Invalid selection")
+		pass
 	
 	# Creates a Windows USB using woeusb
 	# @Param password: Password for the computer
@@ -188,26 +165,7 @@ class LinuxSystem:
 class MacSystem:
 	# Prompt user to select what kind of drive they would like to create
 	def __init__(self):
-		while True:
-			input_text = "What installer would you like to create\n"
-			input_text += "\t1). macOS\n\t2). Linux"
-			drive_type = int(input(input_text))
-			if(drive_type == 1):
-				os.system("stty -echo")
-				password = input("What is the password for this account?")
-				os.system("stty echo")
-				print("\n")
-				self.create_macos_drive(password)
-				exit(0)
-			elif(drive_type == 2):
-				os.system("stty -echo")
-				password = input("What is the password for this account?")
-				os.system("stty echo")
-				print("\n")
-				self.create_linux_drive(password)
-				exit(0)
-			else:
-				print("Invalid selection")
+		pass
 
 	# Function threads will target to execute install commands simultaneously
 	# @Param command: Command to execute
@@ -472,8 +430,7 @@ class MacSystem:
 class WindowsSystem:
 
 	def __init__(self):
-		self.create_drive()
-		exit(0)
+		pass
 
 	# Get the type of iso to create, then format the drive and transfer files
 	def create_drive(self):
@@ -648,14 +605,51 @@ def select_iso():
 		# Return path to iso file
 		return os.path.abspath(files[iso-1])
 
+# Prompts the user and gets the password for the current account
+def get_password():
+	os.system("stty -echo")
+	password = input("What is the password for this account?")
+	os.system("stty echo")
+	print("\n")
+	return password
+
 if __name__ == "__main__":
 	# Determine host OS and display the correponding options
 	if platform == "linux" or platform == "linux2":
-		LinuxSystem()
+		sys = LinuxSystem()
+		while True:
+			input_text = "What installer would you like to create\n"
+			input_text += "\t1). Linux\n\t2). Windows\n"
+			drive_type = int(input(input_text))
+			if(drive_type == 1):
+				password = get_password()
+				sys.create_linux_drive(password)
+				exit(0)
+			elif(drive_type == 2):
+				password = get_password()
+				sys.create_windows_drive(password)
+				exit(0)
+			else:
+				print("Invalid selection")
 	elif platform == "darwin":
-		MacSystem()
+		sys = MacSystem()
+		while True:
+			input_text = "What installer would you like to create\n"
+			input_text += "\t1). macOS\n\t2). Linux"
+			drive_type = int(input(input_text))
+			if(drive_type == 1):
+				password = get_password()
+				sys.create_macos_drive(password)
+				exit(0)
+			elif(drive_type == 2):
+				password = get_password()
+				sys.create_linux_drive(password)
+				exit(0)
+			else:
+				print("Invalid selection")
 	elif platform == "win32":
-		WindowsSystem()
+		sys = WindowsSystem()
+		sys.create_drive()
 	else:
 		print("Unsupported platform")
 		exit(0)
