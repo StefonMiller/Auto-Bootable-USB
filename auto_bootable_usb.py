@@ -441,7 +441,7 @@ class WindowsSystem:
 		iso_path = select_iso()
 		# Make the ISO keywords depend on the ISO name if they want a Linux USB. If they want a Windows USB the drive is labelled ESD-USB
 		if("windows" in iso_path.lower()):
-			iso_keywords = ["esd-iso"]
+			iso_keywords = ["esd-iso", "cccoma_x64f"]
 		else:
 			# Truncate .iso extension from file and split based on - characters. I promise to repent for this abomination
 			iso_name = iso_path.split("\\")[-1]
